@@ -1,26 +1,21 @@
-/*for (let i = 0; i <= 7; i++){
-    if(i === 5){
-        continue;
-    }
-    console.log(i);
-}*/
+// function tag (str, val) {
+//     return `${str[0]} ${val.toUpperCase()} ${str[1]}`;
+// }
 
-// const user = 'Raushan Bhai Patel';
-// const age = 23;
-// const city = "Patna";
-// const balance = 1500.75;
+// let name ='JavaScript';
+// console.log(tag`I love ${name} programming !`)
+    
+// let lines = `
 
-// const msg = `Hello, ${user}!
-// You are ${age} years old and located in ${city}.
-// Your current wallet balance is ₹${balance}.`;
+// first line ${name};
 
-// const msg2 = "Hello, " + user + " ! You are " + age + " years old and located in " + city + ". Your current wallet balance is ₹ " + balance + ".";
+// second line
 
+// third line`;
+// console.log(lines);
 
-// const product = "laptop";
-// const price = "40000";
-// const quantity = 2;
-
-// console.log(`Total bill : ₹${price * quantity}`);
-// console.log(`Total bill(GST included) : ₹${price * quantity * 1.18}`);
-
+let name ='Raushan';
+function tag(str, val){
+    return `${str[0]}${val.toUpperCase()}${str[1]}`;
+}
+console.log(tag`My name is ${name}.`);
