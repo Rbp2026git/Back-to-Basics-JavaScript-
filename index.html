@@ -1,11 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Invoice Generator</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <script src="JavaScript\script3.js"></script>
+    <div class="wrapper">
+        <h1>Invoice Generator</h1>
+        <p class="subtitle">// tagged template literals · real-world demo</p>
+
+        <div class="form-card">
+            <div class="form-grid">
+                <div><label>Your Name / Company</label><input id="from-name" value="Arjun Studio" /></div>
+                <div><label>Your Email</label><input id="from-email" value="arjun@studio.in" /></div>
+            </div>
+            <div class="form-grid">
+                <div><label>Client Name</label><input id="to-name" value="TechCorp Pvt Ltd" /></div>
+                <div><label>Client Email</label><input id="to-email" value="billing@techcorp.in" /></div>
+            </div>
+            <div class="form-grid three">
+                <div><label>Invoice #</label><input id="inv-num" value="INV-2024-042" /></div>
+                <div><label>Date</label><input id="inv-date" type="date" /></div>
+                <div><label>Due Date</label><input id="due-date" type="date" /></div>
+            </div>
+
+            <div class="section-label">Line Items</div>
+            <div id="items-container"></div>
+            <button class="btn btn-ghost" onclick="addItem()">+ Add Item</button>
+            <br>
+            <button class="btn btn-accent" onclick="generateInvoice()">Generate Invoice →</button>
+        </div>
+
+        <div id="preview" style="display:none"></div>
+    </div>
+
+    <script>
+        // ── Tagged Template: sanitize HTML injection
+        function safe(strings, ...vals) {
+            return strings.reduce((out, str, i) => {
+                const v = vals[i - 1];
+                const escaped = String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return out + escaped + str;
+            });
+        }
+
+        // ── Tagged Template: currency formatter
+        function currency(strings, ...vals) {
+            return strings.reduce((out, str, i) => {
+                const v = vals[i - 1];
+                const formatted = typeof v === 'number' ? `₹${v.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : (v ?? '');
+                return out + formatted + str;
+            });
+        }
+
+        // ── Tagged Template: invoice row builder
+        function row(strings, ...vals) {
+            return `<tr><td>${strings.reduce((o, s, i) => o + (vals[i - 1] ?? '') + s)}</td></tr>`;
+        }
+
+        let items = [{ desc: 'UI/UX Design', qty: 1, rate: 45000 }, { desc: 'Frontend Dev', qty: 3, rate: 18000 }];
+
+        function renderItems() {
+            document.getElementById('items-container').innerHTML = items.map((item, i) => `
+    <div class="item-row">
+      <div><label>Description</label><input value="${item.desc}" oninput="items[${i}].desc=this.value" /></div>
+      <div><label>Qty</label><input type="number" value="${item.qty}" min="1" oninput="items[${i}].qty=+this.value" /></div>
+      <div><label>Rate (₹)</label><input type="number" value="${item.rate}" oninput="items[${i}].rate=+this.value" /></div>
+      <div><label>&nbsp;</label><button class="btn btn-sm" onclick="removeItem(${i})">✕</button></div>
+    </div>`).join('');
+        }
+
+        function addItem() { items.push({ desc: '', qty: 1, rate: 0 }); renderItems(); }
+        function removeItem(i) { items.splice(i, 1); renderItems(); }
+
+        function generateInvoice() {
+            const get = id => document.getElementById(id).value;
+            const subtotal = items.reduce((s, it) => s + it.qty * it.rate, 0);
+            const tax = subtotal * 0.18;
+            const total = subtotal + tax;
+
+            const tableRows = items.map(it => `
+    <tr>
+      <td>${safe`${it.desc}`}</td>
+      <td style="font-family:'DM Mono',monospace;text-align:center">${it.qty}</td>
+      <td style="font-family:'DM Mono',monospace;text-align:right">${currency`${it.rate}`}</td>
+      <td style="font-family:'DM Mono',monospace;text-align:right">${currency`${it.qty * it.rate}`}</td>
+    </tr>`).join('');
+
+            document.getElementById('preview').style.display = 'block';
+            document.getElementById('preview').innerHTML = `
+    <div class="inv-header">
+      <div>
+        <div class="inv-title">INVOICE</div>
+        <div style="font-size:.85rem;color:var(--muted);margin-top:.3rem">${safe`${get('from-name')}`}</div>
+        <div style="font-size:.8rem;color:var(--muted)">${safe`${get('from-email')}`}</div>
+      </div>
+      <div class="inv-meta">
+        <div><strong>${safe`${get('inv-num')}`}</strong></div>
+        <div>Issued: ${safe`${get('inv-date')}`}</div>
+        <div>Due: ${safe`${get('due-date')}`}</div>
+      </div>
+    </div>
+    <div class="inv-parties">
+      <div><div class="party-tag">Bill From</div><div class="party-name">${safe`${get('from-name')}`}</div><div class="party-email">${safe`${get('from-email')}`}</div></div>
+      <div><div class="party-tag">Bill To</div><div class="party-name">${safe`${get('to-name')}`}</div><div class="party-email">${safe`${get('to-email')}`}</div></div>
+    </div>
+    <table class="inv-table">
+      <thead><tr><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <div class="inv-total">
+      <div class="inv-total-line"><span>Subtotal</span><span>${currency`${subtotal}`}</span></div>
+      <div class="inv-total-line"><span>GST (18%)</span><span>${currency`${tax}`}</span></div>
+      <div class="inv-grand"><span>Total Due</span><span>${currency`${total}`}</span></div>
+    </div>
+    <div class="inv-footer">Thank you for your business. Payment due within 30 days. · ${safe`${get('from-email')}`}</div>`;
+            document.getElementById('preview').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Init
+        const today = new Date().toISOString().split('T')[0];
+        const due = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+        document.getElementById('inv-date').value = today;
+        document.getElementById('due-date').value = due;
+        renderItems();
+    </script>
 </body>
+
 </html>
