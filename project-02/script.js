@@ -22,12 +22,18 @@ function currency (strings, ...values){
     return result;
 }
 
-
 // ── Tagged Template: invoice row builder
-function row(strings, ...values){
+function row(strings, ...values) {
+    let result = strings[0];
+    values.forEach((value, i) => {
+        result += (value ?? '') + strings[i + 1];
+    });
+    return `<tr>${result}</tr>`;
+}
+/*function row(strings, ...values){
     let result = `<tr><td>${strings.reduce((o, s, i) => o + (values[i - 1] ?? '') + s)}</td></tr>`;
     return result;
-}
+}*/
 
 const items =[ { desc: 'UI/UX Design', qty: 1, rate: 45000 }, { desc: 'Frontend Dev', qty: 3, rate: 18000 } ];
 
