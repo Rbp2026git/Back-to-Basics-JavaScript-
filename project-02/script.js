@@ -1,48 +1,42 @@
-// function safeQuery (strings, ...values){
-//     let query = "";
-//     strings.forEach((strings, i) => {
-//        query += strings;
-//        if(i < values.length){
-//         query += "?";
-//        } 
-//     });
-//     return{ query, params: values};
+// ── Tagged Template: sanitize HTML injection
+// function safe(strings, ...values){
+//     let result = strings[0];
+//     values.forEach((value, i)=>{
+//         const escaped = String(value)
+//         .replace(/&/g, '&amp;')
+//         .replace(/</g, '&lt;')
+//         .replace(/>/g, '&gt;');
 
+//         result += escaped + strings[i + 1];
+//     });
+//     return result;
 // }
 
-// const userId = req.body.userId;
-// const { query, params} = safeQuery`SELECT * FROM accounts WHERE id = ${userId}`;
-// db.run(query, params);
-
-// ── Tagged Template: sanitize HTML injection
-function safe(strings, ...values){
-    let result = strings[0];
-    values.forEach((value, i)=>{
-        const escaped = String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-        result += escaped + strings[i + 1];
+function safe(strings, ...vals) {
+    return strings.reduce((out, str, i) => {
+        const v = vals[i - 1];
+        const escaped = String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return out + escaped + str;
     });
-    return result;
 }
-// let name = "<script>alert('Hack')</script>";
-// console.log(
-//     safe`Hello ${name}`
-// );
 
 // ── Tagged Template: currency formatter
-function currency (strings, ...values){
+/*function currency (strings, ...values){
     let result = strings[0];
     values.forEach((value, i)=>{
         const formatted = (typeof value === 'number')? `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`: (value ?? '');
         result += formatted + strings[i + 1];
     });
     return result;
+}*/
+
+function currency(strings, ...vals) {
+    return strings.reduce((out, str, i) => {
+        const v = vals[i - 1];
+        const formatted = typeof v === 'number' ? `₹${v.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : (v ?? '');
+        return out + formatted + str;
+    });
 }
-// let price = 999;
-// console.log(currency`Amount = ${price}`);
 
 // ── Tagged Template: invoice row builder
 function row(strings, ...values){
@@ -50,17 +44,120 @@ function row(strings, ...values){
     return result;
 }
 
-const items =[
-    { desc: 'UI/UX Design', qty: 1, rate: 45000 },
-    { desc: 'Frontend Dev', qty: 3, rate: 18000 }
-];
+const items =[ { desc: 'UI/UX Design', qty: 1, rate: 45000 }, { desc: 'Frontend Dev', qty: 3, rate: 18000 } ];
 
 function renderItems(){
     document.querySelector('#items-container').innerHtml = items.map((item, i)=>{
         return `<div class="item-row">
-        <div>
-            <label>Description: </label>
-            <input value="${item.desc}" oninput="items[${i}].desc=this.value" >
+            <div>
+                <label>Description: </label>
+                <input value="${item.desc}" oninput="items[${i}].desc=this.value" >
+            </div>
+            <div>
+                <label>Qty:</label>
+                <input type="number" value="${item.qty}" oninput="items[${i}].qty =+ this.value" min="1">
+            </div>
+            <div>
+                <label>Rate (₹):</label>
+                <input type="number" value="${item.rate}" oninput="items[${i}].rate =+ this.rate">
+            </div>
+            <div>
+                <label>&nbsp;</label>
+                <button class="btn btn-sm" onclick="removeItem(${i})"></button>
+            </div>
         </div>`
-    })
+    }).join('');
 }
+
+/* Creating new items on clicking "+ Add items" */
+function addItems(){
+    items.push({ desc: '', qty: '1', rate: '0'});
+    renderItems();
+}
+/* Removing of items on clicking cross(X) button */
+function removeItem(){
+    items.splice(i, 1);
+    renderItems();
+}
+
+/* Generating Invoice */
+function generateInvoice(){
+
+    const get = (id) => {
+        return document.getElementById('id').value;
+    };
+    const subtotal = items.reduce((a, b)=>{
+        return a + b.qty * b.rate
+    }, 0);
+    const tax = subtotal * 0.18;
+    const total = suntotal + tax;
+    const tableRows = items.map((b)=>{
+            return `<tr>
+                        <td>${asfe`${b.desc}`}</td>
+                        <td style="font-family:'DM Mono',monospace;text-align:center">${b.qty}</td>
+                        <td style="font-family:'DM Mono',monospace;text-align:right">${currency`${it.rate}`}</td>
+                        <td style="font-family:'DM Mono',monospace;text-align:right">${currency`${it.qty * it.rate}`}</td>
+                    </tr>`
+    }).join('');
+
+    document.querySelector('#preview').style.display = 'block';
+    document.querySelector('#preview').innerHTML = `
+        <div class="inv-header">
+            <div>INVOICE</div>
+            <div style="font-size:.85rem;color:var(--muted);margin-top:.3rem">${safe`${get('from-name')}`}</div>
+            <div style="font-size:.8rem;color:var(--muted)">${safe`${get('from-email')}`}</div>
+        </div>
+        <div class="inv-meta">
+            <div><strong>${safe`${get('inv-num')}`}</strong></div>
+            <div>${safe`${get('inv-date')}`}</div>
+            <div>${safe`${get('due-date')}`}</div>
+        </div>
+        <div class="inv-parties">
+            <div>
+                <div class="party-tag">Bill From:</div>
+                <div class="party-name">${safe`${get('form-name')}`}</div>
+                <div class="party-email">${safe`${get('form-email')}`}</div>
+            </div>
+            <div>
+                <div class="party-tag">Bill to:</div>
+                <div class="party-name">${safe`${get('to-name')}`}</div>
+                <div class="party-email">${safe`${get('to-email')}`}</div>
+            </div>
+        </div>
+        <div class="inv-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th style="text-align: center">Qty</th>
+                    <th style="text-align:right">Rate</th>
+                    <th style="text-align:right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+        </div>
+        <div class="inv-total">
+            <div class="inv-total-line">
+                <span>subtotal</span>
+                <span>${currency`${subtotal}`}</span>
+            </div>
+            <div class="inv-total-line">
+                <span>GST (18%)</span>
+                <span>${currency`${tax}`}</span>
+            </div>
+            <div class="inv-grand">
+                <span>Total Due</span>
+                <span>${currency`${total}`}</span>
+            </div>
+        </div>
+        <div class="inv-footer">Thank you for your business. Payment due within 30 days. · ${safe`${get('from-email')}`}</div>
+    `;
+    document.getElementById('preview').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+}
+
+//init
+const today = new Date().toISOString().split('T')[0];
+const due = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+document.querySelector('#inv-date').value = today;
+document.querySelector('#due-date').value = due;
+removeItem();
